@@ -57,10 +57,11 @@ app.get('/status', (req, res) => {
 async function sendPushNotification(location) {
     try {
         await axios.post(`https://ntfy.sh/${NTFY_TOPIC}`, 
-            `🚨 ALERT: Water detected at ${location}!`, 
+            `🚨 ALERT: Leak detected at ${location}!`, 
             { headers: { 'Title': 'Vinee Secure Alert', 'Priority': '5' } }
         );
     } catch (e) { console.error("Notify failed"); }
 }
+
 
 app.listen(process.env.PORT || 3000);
