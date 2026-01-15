@@ -5,57 +5,62 @@ const app = express();
 
 app.use(express.json());
 
-// --- CONFIGURATION ---
-// IMPORTANT: Subscribe to this same name in the ntfy app on your phone
 const NTFY_TOPIC = 'vinee_secure_system_7788'; 
-let sensorData = {};
+let sensorData = {}; 
+let sensorList = {}; 
 
-// 1. Serve the dashboard HTML
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// --- SYNC LOGIC: Handles Add, Rename, and DELETE ---
+app.post('/sync', (req, res) => {
+    const newList = req.body;
+    
+    // Cleanup: If a pin exists in status data but NOT in the new list, delete its status
+    for (const pin in sensorData) {
+        if (!newList[pin]) {
+            delete sensorData[pin];
+        }
+    }
+    
+    sensorList = newList; 
+    console.log("Cloud Synced. Current Sensors:", sensorList);
+    res.sendStatus(200);
 });
 
-// 2. Receive data from Raspberry Pi
 app.post('/update', (req, res) => {
     const { pin, name, status } = req.body;
-    const previousStatus = sensorData[pin] ? sensorData[pin].status : 'OFF';
+    const prev = sensorData[pin] ? sensorData[pin].status : 'OFF';
 
     sensorData[pin] = {
-        name: name,
-        status: status, // "ON" = Leak, "OFF" = Dry
-        time: new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        status: status,
+        time: new Date().toLocaleTimeString()
     };
 
-    // Trigger phone alert only when status flips to "ON"
-    if (status === 'ON' && previousStatus !== 'ON') {
-        sendPushNotification(name);
+    if (status === 'ON' && prev !== 'ON') {
+        sendPushNotification(name || `Pin ${pin}`);
     }
-
-    res.status(200).send({ success: true });
+    res.sendStatus(200);
 });
 
-// 3. Status API for the HTML Dashboard
 app.get('/status', (req, res) => {
-    res.json(sensorData);
+    let combined = {};
+    for (const pin in sensorList) {
+        combined[pin] = {
+            name: sensorList[pin],
+            status: sensorData[pin] ? sensorData[pin].status : 'OFF',
+            time: sensorData[pin] ? sensorData[pin].time : 'Waiting...'
+        };
+    }
+    res.json(combined);
 });
 
 async function sendPushNotification(location) {
     try {
         await axios.post(`https://ntfy.sh/${NTFY_TOPIC}`, 
             `🚨 ALERT: Water detected at ${location}!`, 
-            {
-                headers: {
-                    'Title': 'Vinee Secure Alert',
-                    'Priority': '5', // Max priority (loud alert)
-                    'Tags': 'warning,droplet'
-                }
-            }
+            { headers: { 'Title': 'Vinee Secure Alert', 'Priority': '5' } }
         );
-        console.log("Push notification sent.");
-    } catch (error) {
-        console.error("Notification Error:", error.message);
-    }
+    } catch (e) { console.error("Notify failed"); }
 }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
+app.listen(process.env.PORT || 3000);
