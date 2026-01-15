@@ -3,50 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinee Cloud Dashboard</title>
+    <title>VINEE SECURE | Cloud</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; }
-        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        .card { 
-            background: #1e1e1e; border-radius: 12px; padding: 20px; width: 220px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s;
-        }
-        .ON { border-top: 8px solid #4CAF50; } /* Leak Detected */
-        .OFF { border-top: 8px solid #F44336; } /* Dry */
-        .status-text { font-size: 1.2rem; font-weight: bold; margin: 15px 0; }
-        .update-time { font-size: 0.8rem; color: #888; }
+        :root { --bg: #020617; --card: rgba(30, 41, 59, 0.7); --danger: #ef4444; --success: #10b981; --text: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e1b4b, #020617); color: var(--text); margin: 0; padding: 40px 20px; min-height: 100vh; }
+        header { max-width: 1000px; margin: 0 auto 50px auto; border-left: 4px solid var(--danger); padding-left: 20px; }
+        h1 { font-weight: 800; font-size: 2.5rem; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; max-width: 1000px; margin: 0 auto; }
+        .card { background: var(--card); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 30px; transition: all 0.4s ease; }
+        .card.ON { border: 2px solid var(--danger); background: rgba(127, 29, 29, 0.4); animation: pulse 2s infinite; }
+        .card.OFF { border-bottom: 4px solid var(--success); }
+        .status-badge { display: inline-flex; padding: 6px 14px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; margin-bottom: 20px; }
+        .ON .status-badge { background: var(--danger); color: white; }
+        .OFF .status-badge { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .meta { margin-top: 15px; color: #94a3b8; font-size: 0.9rem; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 </head>
 <body>
-    <h1>🏠 Vinee Cloud Monitor</h1>
-    <div class="grid" id="dashboard">
-        </div>
-
+    <header><h1>VINEE <span>SECURE</span></h1><p>Real-time Leak Monitoring</p></header>
+    <div class="grid" id="dashboard"></div>
     <script>
-        async function updateDashboard() {
-            try {
-                const response = await fetch('/status');
-                const data = await response.json();
-                const container = document.getElementById('dashboard');
-                container.innerHTML = '';
-
-                for (const pin in data) {
-                    const sensor = data[pin];
-                    const card = document.createElement('div');
-                    card.className = `card ${sensor.status}`;
-                    card.innerHTML = `
-                        <h3>${sensor.name}</h3>
-                        <div class="status-text">${sensor.status === 'ON' ? '⚠️ LEAK DETECTED' : '✅ DRY'}</div>
-                        <div class="update-time">Last Update: ${sensor.time}</div>
-                    `;
-                    container.appendChild(card);
-                }
-            } catch (err) { console.error("Error fetching data", err); }
+        async function fetchStatus() {
+            const res = await fetch('/status');
+            const sensors = await res.json();
+            const container = document.getElementById('dashboard');
+            container.innerHTML = '';
+            for (const id in sensors) {
+                const s = sensors[id];
+                container.innerHTML += `
+                    <div class="card ${s.status}">
+                        <div class="status-badge">${s.status === 'ON' ? '⚠️ CRITICAL' : '✅ SECURE'}</div>
+                        <h3>${s.name}</h3>
+                        <div class="meta">Node: GPIO ${id}<br>Last Update: ${s.time}</div>
+                    </div>`;
+            }
         }
-
-        // Refresh data every 2 seconds
-        setInterval(updateDashboard, 2000);
-        updateDashboard();
+        setInterval(fetchStatus, 2000);
+        fetchStatus();
     </script>
 </body>
 </html>
