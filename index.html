@@ -1,20 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pi Status Monitor</title>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinee Cloud Dashboard</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #eee; }
-        .container { width: 300px; margin: auto; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; }
+        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        .card { 
+            background: #1e1e1e; border-radius: 12px; padding: 20px; width: 220px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s;
+        }
+        .ON { border-top: 8px solid #4CAF50; } /* Leak Detected */
+        .OFF { border-top: 8px solid #F44336; } /* Dry */
+        .status-text { font-size: 1.2rem; font-weight: bold; margin: 15px 0; }
+        .update-time { font-size: 0.8rem; color: #888; }
     </style>
 </head>
 <body>
-    <h1>Pin 18 Monitor</h1>
-    <div class="container">
-        <div hx-get="/status" hx-trigger="every 1s" hx-swap="innerHTML">
-            <div id="status-display">Waiting for data...</div>
+    <h1>🏠 Vinee Cloud Monitor</h1>
+    <div class="grid" id="dashboard">
         </div>
-    </div>
-    <p>Node.js Backend on Render</p>
+
+    <script>
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                const container = document.getElementById('dashboard');
+                container.innerHTML = '';
+
+                for (const pin in data) {
+                    const sensor = data[pin];
+                    const card = document.createElement('div');
+                    card.className = `card ${sensor.status}`;
+                    card.innerHTML = `
+                        <h3>${sensor.name}</h3>
+                        <div class="status-text">${sensor.status === 'ON' ? '⚠️ LEAK DETECTED' : '✅ DRY'}</div>
+                        <div class="update-time">Last Update: ${sensor.time}</div>
+                    `;
+                    container.appendChild(card);
+                }
+            } catch (err) { console.error("Error fetching data", err); }
+        }
+
+        // Refresh data every 2 seconds
+        setInterval(updateDashboard, 2000);
+        updateDashboard();
+    </script>
 </body>
 </html>
